@@ -1,0 +1,58 @@
+#include <iostream>
+#include <unordered_map>
+#include <string>
+#include <stdexcept>
+
+template<typename T>
+class InMemoryDB {
+private:
+    std::unordered_map<std::string, T> database;
+    std::unordered_map<std::string, T> transactionChanges;
+    bool inTransaction;
+
+public:
+    InMemoryDB() : inTransaction(false) {}
+
+    void begin_transaction() {
+        if (inTransaction) {
+            throw std::runtime_error("Transaction already in progress");
+        }
+        inTransaction = true;
+    }
+
+    void put(const std::string& key, const T& value) {
+        if (!inTransaction) {
+            throw std::runtime_error("No transaction in progress");
+        }
+        transactionChanges[key] = value;
+    }
+
+    T get(const std::string& key) {
+        if (transactionChanges.find(key) != transactionChanges.end()) {
+            return transactionChanges[key];
+        } else if (database.find(key) != database.end()) {
+            return database[key];
+        } else {
+            return T(); // Returning default value if key doesn't exist
+        }
+    }
+
+    void commit() {
+        if (!inTransaction) {
+            throw std::runtime_error("No transaction in progress");
+        }
+        for (const auto& change : transactionChanges) {
+            database[change.first] = change.second;
+        }
+        transactionChanges.clear();
+        inTransaction = false;
+    }
+
+    void rollback() {
+        if (!inTransaction) {
+            throw std::runtime_error("No transaction in progress");
+        }
+        transactionChanges.clear();
+        inTransaction = false;
+    }
+};
